@@ -52,6 +52,28 @@ Thoát: **Ctrl+Alt+Esc** (hoặc Ctrl+C). Cấu hình đọc từ
 Cờ hữu ích: `--no-engine` chỉ chuyển tiếp phím (thử kết nối cho an toàn),
 `-v` in từng phím.
 
+### Phím tắt đổi Vi/En
+
+Daemon nghe `SIGUSR1` để đổi qua lại Việt/Anh và ghi lại vào
+`~/.config/openkey/openkey.conf` (dùng chung file với addon fcitx5):
+
+```bash
+pkill -USR1 -x openkeyd
+```
+
+`contrib/openkey-toggle.sh` bọc sẵn việc này kèm thông báo, bind vào phím tắt
+của compositor:
+
+```
+bind = SUPER, F1, exec, ~/.local/bin/openkey-toggle.sh
+```
+
+### Cài thành dịch vụ người dùng
+
+```bash
+./install.sh          # build + cài vào ~/.local + bật systemd user service
+```
+
 ### Biến môi trường
 
 Ứng dụng GTK/Qt chỉ dùng bộ gõ của compositor khi **không** bị trỏ sang fcitx:

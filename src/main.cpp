@@ -50,8 +50,12 @@ constexpr uint32_t kKeyBackspace = 14;
 constexpr uint32_t kXkbKeycodeOffset = 8;
 
 bool gRunning = true;
+// SIGUSR1 = doi qua lai Viet/Anh (de bind vao phim tat cua compositor).
+volatile sig_atomic_t gToggleLanguage = 0;
 
 void onSignal(int) { gRunning = false; }
+
+void onSigUsr1(int) { gToggleLanguage = 1; }
 
 void logLine(const char *fmt, ...) {
     va_list ap;
@@ -388,6 +392,19 @@ const wl_registry_listener kRegistryListener = {registryGlobal,
 
 // --------------------------------------------------------------------------
 
+// Doi Viet <-> Anh, ghi lai vao cung file cau hinh voi addon fcitx5.
+void toggleLanguage(State &st) {
+    openkey::Settings settings;
+    openkey::loadSettingsFile(openkey::defaultSettingsPath(), settings);
+    settings.language = settings.language ? 0 : 1;
+    openkey::applySettings(settings);
+    openkey::saveSettingsFile(openkey::defaultSettingsPath(), settings);
+    if (st.core)
+        st.core->reset();
+    logLine("openkeyd: doi sang %s",
+            settings.language ? "Tiếng Việt" : "English");
+}
+
 void applyEngineConfig(State &st, bool useEngine) {
     openkey::Settings settings;
     if (openkey::loadSettingsFile(openkey::defaultSettingsPath(), settings))
@@ -433,6 +450,7 @@ int main(int argc, char **argv) {
 
     signal(SIGINT, onSignal);
     signal(SIGTERM, onSignal);
+    signal(SIGUSR1, onSigUsr1);
     signal(SIGPIPE, SIG_IGN);
 
     applyEngineConfig(st, useEngine);
@@ -469,6 +487,10 @@ int main(int argc, char **argv) {
             useEngine ? "bat go tieng Viet" : "chi chuyen tiep phim");
 
     while (gRunning) {
+        if (gToggleLanguage) {
+            gToggleLanguage = 0;
+            toggleLanguage(st);
+        }
         if (wl_display_dispatch(st.display) == -1) {
             if (errno == EINTR)
                 continue;

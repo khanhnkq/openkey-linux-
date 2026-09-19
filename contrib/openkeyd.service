@@ -1,0 +1,14 @@
+[Unit]
+Description=OpenKey — bộ gõ tiếng Việt cho Wayland
+Documentation=https://github.com/tuyenvm/OpenKey
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/openkeyd
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target
