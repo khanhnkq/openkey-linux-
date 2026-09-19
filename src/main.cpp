@@ -57,12 +57,24 @@ void onSignal(int) { gRunning = false; }
 
 void onSigUsr1(int) { gToggleLanguage = 1; }
 
+// Ghi them ra file khi co --log: rat tien khi chay bang systemd service va
+// khong doc duoc journal tu noi khac.
+FILE *gLogFile = nullptr;
+
 void logLine(const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     std::vfprintf(stderr, fmt, ap);
     va_end(ap);
     std::fputc('\n', stderr);
+
+    if (gLogFile) {
+        va_start(ap, fmt);
+        std::vfprintf(gLogFile, fmt, ap);
+        va_end(ap);
+        std::fputc('\n', gLogFile);
+        std::fflush(gLogFile);
+    }
 }
 
 struct State {
@@ -444,6 +456,12 @@ int main(int argc, char **argv) {
         else if (std::strcmp(argv[i], "-v") == 0 ||
                  std::strcmp(argv[i], "--verbose") == 0)
             st.verbose = true;
+        else if (std::strcmp(argv[i], "--log") == 0 && i + 1 < argc) {
+            gLogFile = std::fopen(argv[++i], "w");
+            if (!gLogFile)
+                std::fprintf(stderr, "openkeyd: khong mo duoc file log %s\n",
+                             argv[i]);
+        }
         else
             usage(argv[0]);
     }
@@ -463,7 +481,30 @@ int main(int argc, char **argv) {
 
     st.display = wl_display_connect(nullptr);
     if (!st.display) {
-        logLine("openkeyd: khong ket noi duoc compositor Wayland");
+        // systemd user service co the khong duoc ke thua WAYLAND_DISPLAY, nen
+        // tu tim socket wayland-N trong XDG_RUNTIME_DIR.
+        const char *runtimeDir = std::getenv("XDG_RUNTIME_DIR");
+        if (runtimeDir) {
+            for (int i = 1; i <= 4 && !st.display; i++) {
+                const std::string name = "wayland-" + std::to_string(i);
+                const std::string path =
+                    std::string(runtimeDir) + "/" + name;
+                if (access(path.c_str(), F_OK) == 0) {
+                    logLine("openkeyd: thu ket noi %s", name.c_str());
+                    st.display = wl_display_connect(name.c_str());
+                }
+            }
+        }
+    }
+    if (!st.display) {
+        logLine("openkeyd: khong ket noi duoc compositor Wayland "
+                "(WAYLAND_DISPLAY=%s XDG_RUNTIME_DIR=%s)",
+                std::getenv("WAYLAND_DISPLAY")
+                    ? std::getenv("WAYLAND_DISPLAY")
+                    : "(chua dat)",
+                std::getenv("XDG_RUNTIME_DIR")
+                    ? std::getenv("XDG_RUNTIME_DIR")
+                    : "(chua dat)");
         return 1;
     }
     st.registry = wl_display_get_registry(st.display);

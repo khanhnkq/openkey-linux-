@@ -6,7 +6,9 @@ PartOf=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/openkeyd
+# -v + --log: dang o giai doan chan doan, ghi tung phim ra
+# ~/.cache/openkey/openkeyd.log. Khi da on thi bo -v di.
+ExecStart=%h/.local/bin/openkeyd -v --log %h/.cache/openkey/openkeyd.log
 Restart=on-failure
 RestartSec=2
 
