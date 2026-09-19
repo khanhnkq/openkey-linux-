@@ -1,0 +1,13 @@
+OpenKey cho Linux
+=================
+
+Phan engine (src/engine/) va thuat toan go tieng Viet lay nguyen tu OpenKey:
+    https://github.com/tuyenvm/OpenKey
+    Tac gia: Tuyen Mai (va cac cong tac vien)
+    Giay phep: GNU General Public License v3.0 (xem LICENSE)
+
+Lop giao tiep Wayland (src/main.cpp) va lop trung gian
+(src/openkey_core.*) cung phat hanh duoi GPL-3.0 de tuong thich.
+
+Day la ban chinh sua/phat trien them, khong phai ban phat hanh chinh thuc
+cua OpenKey.
