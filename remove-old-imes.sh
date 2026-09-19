@@ -11,7 +11,8 @@ if [ "$1" != "--da-kiem-tra-openkeyd" ]; then
     cat >&2 <<'MSG'
 Dung lai. Hay lam theo thu tu:
 
-  1. systemctl --user stop fcitx5          # tam tat fcitx5
+  1. fcitx5-remote -e                      # tam tat fcitx5
+     (hoac: pkill -x fcitx5 — may nay khong co systemd unit cho fcitx5)
   2. ~/.local/bin/openkeyd -v              # thu go: vieejt -> việt
   3. Neu 1-2 OK thi chay lai:
          ./remove-old-imes.sh --da-kiem-tra-openkeyd
@@ -35,10 +36,16 @@ cp -r "$HOME/.config/hypr" "$B/" 2>/dev/null || true
 cp "$HOME/.local/bin/fcitx5-ime-toggle.sh" "$B/" 2>/dev/null || true
 
 echo "== Tat fcitx5 / ibus =="
-systemctl --user disable --now fcitx5 2>/dev/null || true
-systemctl --user stop fcitx5 2>/dev/null || true
+# fcitx5 tren may nay do Hyprland khoi dong (exec_cmd "fcitx5 -d"), KHONG co
+# systemd unit, nen phai bao no tu thoat hoac kill.
 fcitx5-remote -e 2>/dev/null || true
+sleep 1
+pkill -x fcitx5 2>/dev/null || true
+systemctl --user stop fcitx5 2>/dev/null || true   # phong khi co unit that
 ibus exit 2>/dev/null || true
+if pgrep -x fcitx5 >/dev/null; then
+    echo "   CANH BAO: fcitx5 van chay — thu: pkill -x fcitx5" >&2
+fi
 
 echo "== Go addon openkey cua ban fcitx5 (do chung ta cai truoc day) =="
 sudo rm -f /usr/lib/fcitx5/libopenkey.so \

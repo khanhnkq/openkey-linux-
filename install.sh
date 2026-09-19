@@ -18,4 +18,6 @@ echo
 echo "OK. Trang thai:"
 systemctl --user --no-pager status openkeyd.service | head -5
 echo
-echo "Nho: phai tat fcitx5 (no giu cho ngoi bo go). Chay ./remove-old-imes.sh"
+echo "Nho: phai tat fcitx5 (no giu cho ngoi bo go):"
+echo "       fcitx5-remote -e   # hoac: pkill -x fcitx5"
+echo "     fcitx5 o may nay do Hyprland khoi dong (execs.lua), khong co systemd unit."
