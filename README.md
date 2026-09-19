@@ -1,35 +1,44 @@
 # OpenKey cho Linux
 
-Bộ gõ tiếng Việt **chạy độc lập**, không cần fcitx5, không cần ibus, không cần
-quyền đọc bàn phím ở tầng kernel.
+Bộ gõ tiếng Việt cho Linux, dùng lại **engine của
+[OpenKey](https://github.com/tuyenvm/OpenKey)** (bản macOS/Windows) — xem
+`NOTICE` và `LICENSE` (GPL-3.0).
 
-Daemon `openkeyd` nói chuyện trực tiếp với compositor Wayland:
+Một engine, **hai frontend**:
 
+| | `fcitx5/` | `wayland/` |
+|---|---|---|
+| Cách chạy | addon nạp trong fcitx5 | daemon độc lập `openkeyd` |
+| Phụ thuộc | fcitx5 | compositor hỗ trợ `zwp_input_method_v2` |
+| Quyền | không cần gì thêm | không cần gì thêm |
+| Trạng thái | **đang dùng, đã kiểm chứng** (Hyprland, kitty, Firefox) | PoC, chưa kiểm chứng trong phiên thật |
+
+## Cài nhanh (đường fcitx5)
+
+```bash
+git clone <repo-nay> && cd openkey-linux
+./deploy.sh
 ```
-zwp_input_method_manager_v2       ← nhận phím khi có ô nhập liệu được focus
-zwp_virtual_keyboard_manager_v1   ← bơm phím lại cho ứng dụng
+
+`deploy.sh` tự: kiểm phụ thuộc → build + test → cài addon vào `/usr` (backup +
+**restart fcitx5 thật**, có kiểm chứng qua DBus) → cài script đổi Vi/En → ghi
+cấu hình fcitx5 (`Default Layout=us`, nhóm gõ chỉ `keyboard-us` + `openkey`,
+`DefaultIM=openkey`, `ShareInputState=All`). Cuối cùng in ra 3 dòng cần thêm
+vào compositor.
+
+Yêu cầu: `cmake`, `extra-cmake-modules`, `fcitx5`, `pkgconf` (+ `base-devel`).
+
+## Cài daemon độc lập (thử nghiệm)
+
+```bash
+./install-openkeyd.sh     # build + cài ~/.local/bin + systemd user service
 ```
 
-Engine ghép dấu, bảng mã, macro dùng lại nguyên mã nguồn của
-[OpenKey](https://github.com/tuyenvm/OpenKey) (xem `NOTICE`, giấy phép GPL-3.0).
+Daemon nói chuyện trực tiếp với compositor qua `zwp_input_method_manager_v2`
+(nhận phím) và `zwp_virtual_keyboard_manager_v1` (bơm phím lại), nên **không cần
+fcitx5**. Xem `wayland/README.md`.
 
-## Vì sao không đi đường addon fcitx5
-
-Bản addon fcitx5 gặp ba trục trặc cố hữu trên Wayland, kiến trúc này tránh hết:
-
-| Vấn đề ở addon fcitx5 | Ở `openkeyd` |
-|---|---|
-| `commitString()` và `forwardKey()` đi hai đường, thứ tự không đảm bảo | mọi thứ trên **một** kết nối Wayland → thứ tự chắc chắn |
-| GTK/Firefox gọi `reset()` mỗi phím, xoá bộ đệm từ | không có `reset()` |
-| `forwardKey(BackSpace)` không xoá được gì trên frontend dbus | bơm BackSpace qua virtual keyboard |
-| Unicode phải lách qua bảng mã | `commit_string()` nhận UTF-8 thẳng |
-
-## Yêu cầu
-
-- Compositor hỗ trợ `zwp_input_method_v2` (Hyprland, wlroots…)
-- `wayland-client`, `xkbcommon`, `wayland-protocols` (XML đã kèm trong `protocols/`)
-
-## Build
+## Build tay
 
 ```bash
 cmake -B build
@@ -37,74 +46,60 @@ cmake --build build -j$(nproc)
 ctest --test-dir build --output-on-failure
 ```
 
-## Chạy
+Tùy chọn: `-DWITH_FCITX5=OFF` (không có fcitx5 dev), `-DWITH_WAYLAND=OFF`
+(không có wayland/xkbcommon).
 
-Tắt bộ gõ khác trước — mỗi seat chỉ giữ được **một** chương trình bộ gõ:
+## Cấu hình
 
-```bash
-systemctl --user stop fcitx5      # nếu đang dùng fcitx5
-./build/openkeyd -v
-```
+Addon đọc `~/.config/openkey/openkey.conf` **mỗi lần chuyển sang input method
+OpenKey**. Các khoá chính: `inputType` (0 Telex, 1 VNI), `codeTable`,
+`checkSpelling`, `quickTelex`, `useMacro` (+ `~/.config/openkey/macro.txt` theo
+định dạng UniKey), `freeMark`, `useModernOrthography`, `debugLog`
+(1 = ghi `~/.cache/openkey/debug.log`).
 
-Thoát: **Ctrl+Alt+Esc** (hoặc Ctrl+C). Cấu hình đọc từ
-`~/.config/openkey/openkey.conf`; bật ghi vết bằng khoá `debugLog = 1`.
+## Bẫy đã gặp — đọc trước khi sửa
 
-Cờ hữu ích: `--no-engine` chỉ chuyển tiếp phím (thử kết nối cho an toàn),
-`-v` in từng phím.
+1. **`fcitx5-remote -r` KHÔNG nạp lại addon.** Nó chỉ reload config. Sau khi
+   cài `.so` mới phải restart fcitx5 thật (`fcitx5 -d --replace`, hoặc
+   `busctl --user call org.fcitx.Fcitx5 /controller org.fcitx.Fcitx.Controller1 Restart`).
+2. **GTK/Firefox gọi `reset()` sau MỖI phím** khi ta pass-through (client tự
+   chèn ký tự → nội dung đổi → GTK reset IM context). Vì vậy
+   `OpenKeyEngine::reset()` cố ý **không** xoá trạng thái; chỉ `activate()` /
+   `deactivate()` mới xoá.
+3. **`forwardKey(BackSpace)` không xoá được gì trên frontend dbus của GTK.**
+   Client nào báo `surroundingText()` hợp lệ thì phải dùng
+   `deleteSurroundingText()`; kitty (text-input-v3, không có surrounding text)
+   thì `forwardKey` lại đúng.
+4. **`ShareInputState=Program`** làm mỗi app nhớ trạng thái Vi/En riêng → phải
+   chuyển lại mỗi app. Để `All` nếu không muốn vậy.
+5. **Engine đếm `_index` tách rời `_specialChar`/`_spaceCount`**, nên sau khi
+   BackSpace đi qua các vùng đó, lệnh xoá có thể ăn vào chữ ngoài từ.
+   `Core::handleKey()` có chốt `isReplaceSane()` để bắt đầu lại thay vì xoá bừa.
 
-### Phím tắt đổi Vi/En
+## Chuỗi Telex (engine là bản OpenKey, không tự sửa như UniKey)
 
-Daemon nghe `SIGUSR1` để đổi qua lại Việt/Anh và ghi lại vào
-`~/.config/openkey/openkey.conf` (dùng chung file với addon fcitx5):
-
-```bash
-pkill -USR1 -x openkeyd
-```
-
-`contrib/openkey-toggle.sh` bọc sẵn việc này kèm thông báo, bind vào phím tắt
-của compositor:
-
-```
-bind = SUPER, F1, exec, ~/.local/bin/openkey-toggle.sh
-```
-
-### Cài thành dịch vụ người dùng
-
-```bash
-./install.sh          # build + cài vào ~/.local + bật systemd user service
-```
-
-### Biến môi trường
-
-Ứng dụng GTK/Qt chỉ dùng bộ gõ của compositor khi **không** bị trỏ sang fcitx:
-
-```
-GTK_IM_MODULE=fcitx     ← phải bỏ
-QT_IM_MODULE=fcitx      ← phải bỏ
-```
-
-## An toàn
-
-Grab bàn phím do compositor quản lý nên tự nhả khi tiến trình thoát hoặc crash —
-không có nguy cơ mất bàn phím như cách `EVIOCGRAB`.
-
-## Trạng thái
-
-PoC đã build và chạy, **chưa kiểm thử trong phiên làm việc thật**. Còn thiếu:
-
-- tray/icon + GUI cấu hình
-- systemd user service
-- `set_preedit_string` để hiện chữ đang gõ có gạch chân
-- bảng chọn ứng viên (`zwp_input_popup_surface_v2`)
-- phím tắt đổi Vi/En cho chính daemon
-- app không dùng `text-input-v3` (game, vài app Electron) chưa có tiếng Việt
+| Muốn ra | Gõ |
+|---|---|
+| `ươ` | `uow` hoặc `wow` (**không** phải `wo`) |
+| `được` | `dduowcj`, `ddwowcj` |
+| `ủa` | `uar` |
+| `nước` | `nuwowsc` |
+| xoá dấu | `z` |
 
 ## Cấu trúc
 
 ```
-src/main.cpp          daemon: vòng lặp Wayland, nhận phím, gọi engine, bơm phím
-src/openkey_core.*    lớp trung gian không phụ thuộc giao diện
-src/engine/           engine OpenKey (nguyên bản, GPL-3.0)
-protocols/            XML của input-method-v2 và virtual-keyboard-v1
-tests/                test headless cho openkey_core
+src/            lop dung chung: openkey_core (khong phu thuoc giao dien) + engine OpenKey
+fcitx5/         addon fcitx5 (openkey.cpp, .conf, CMake)
+wayland/        daemon doc lap openkeyd + XML protocol
+tests/          test headless cho openkey_core (109 case)
+contrib/        script doi Vi/En, systemd service
+deploy.sh       cai dat tren may moi (duong fcitx5)
+install-openkeyd.sh   cai daemon doc lap
+remove-old-imes.sh    go cac bo go cu (co backup + chot an toan)
 ```
+
+## Giấy phép
+
+GPL-3.0. Engine và thuật toán gõ lấy từ OpenKey của Tuyen Mai — xem `NOTICE`.
+Đây là bản chỉnh sửa/phát triển thêm, không phải bản phát hành chính thức.

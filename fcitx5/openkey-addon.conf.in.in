@@ -1,0 +1,12 @@
+[Addon]
+Name=OpenKey Wrapper For Fcitx
+Name[vi]=Bo go OpenKey cho Fcitx
+Category=InputMethod
+Version=@PROJECT_VERSION@
+Library=libopenkey
+Type=SharedLibrary
+OnDemand=True
+Configurable=False
+
+[Dependencies]
+0=core:@REQUIRED_FCITX_VERSION@

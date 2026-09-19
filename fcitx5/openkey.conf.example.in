@@ -1,0 +1,62 @@
+# fcitx5-openkey
+#
+# Copy file nay thanh ~/.config/openkey/openkey.conf roi chinh sua.
+# Addon doc lai moi khi ban chuyen sang input method OpenKey (activate),
+# nen khong can khoi dong lai fcitx5.
+#
+# Gia tri 0 = tat, 1 = bat (tru cac muc ghi chu khac).
+
+# 0: English, 1: Tieng Viet
+language = 1
+
+# Kieu go: 0 = Telex, 1 = VNI, 2 = Simple Telex 1, 3 = Simple Telex 2
+inputType = 0
+
+# Bang ma: 0 = Unicode, 1 = TCVN3 (ABC), 2 = VNI Windows,
+#          3 = Unicode Compound, 4 = Vietnamese locale CP1258
+# Luu y: nen dung 0 (Unicode) cho moi ung dung hien dai.
+codeTable = 0
+
+# Cho phep dat dau tu do (oa/oe/uy...)
+freeMark = 1
+
+# Kiem tra chinh ta
+checkSpelling = 1
+
+# 1: oa, oe, uy (kieu moi) - 0: oà, oé, uý (kieu cu)
+useModernOrthography = 0
+
+# Go nhanh: cc=ch, gg=gi, kk=kh, nn=ng, qq=qu, pp=ph, tt=th, uu=ươ
+quickTelex = 0
+
+# Go sai chinh ta thi tra lai dung nhung gi da go
+restoreIfWrongSpelling = 1
+
+# Macro: 1 = bat. Tu dien dat trong ~/.config/openkey/macro.txt
+# (dinh dang UniKey: moi dong "ky_tu:noi_dung")
+useMacro = 0
+useMacroInEnglishMode = 0
+autoCapsMacro = 0
+
+# Tu dong viet hoa chu dau
+upperCaseFirstChar = 0
+
+# Cho phep phu am Z, F, W, J
+allowConsonantZFWJ = 0
+
+# f -> ph, j -> gi, w -> qu
+quickStartConsonant = 0
+# g -> ng, h -> nh, k -> ch
+quickEndConsonant = 0
+
+# Cac tuy chon chua dung tren Linux (de trong de tuong thich file cua mac/Win)
+fixRecommendBrowser = 0
+useSmartSwitchKey = 0
+tempOffSpelling = 0
+rememberCode = 0
+otherLanguage = 0
+tempOffOpenKey = 0
+
+# 1: ghi vet hoat dong ra ~/.cache/openkey/debug.log (mot dong moi phim).
+# Mac dinh 0. Bat len khi can chan doan loi, xong thi tat lai.
+debugLog = 0
